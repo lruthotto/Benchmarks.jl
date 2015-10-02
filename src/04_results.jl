@@ -1,5 +1,5 @@
-# A `Results` object stores information about the results of benchmarking an
-# expression.
+# An `ExecutionResults` object stores information gained via benchmark
+# execution, prior to statistical analysis.
 #
 # Fields:
 #
@@ -31,7 +31,7 @@
 #     time_used::Float64: The time (in nanoseconds) that was consumed by the
 #         benchmarking process.
 
-immutable Results
+immutable ExecutionResults
     precompiled::Bool
     multiple_samples::Bool
     search_performed::Bool
@@ -40,8 +40,8 @@ immutable Results
 end
 
 # A `SummaryStatistics` object stores the results of a statistic analysis of
-# a `Results` object. The precise analysis strategy employed depends on the
-# structure of the `Results` object:
+# an `ExecutionResults` object. The precise analysis strategy employed
+# depends on the structure of the `ExecutionResults` object:
 #
 #     (1) If only a single sample of a single evaluation was recorded, the
 #     analysis reports only point estimates.
@@ -82,7 +82,7 @@ immutable SummaryStatistics
     allocations::Int
     r²::Nullable{Float64}
 
-    function SummaryStatistics(r::Results)
+    function SummaryStatistics(r::ExecutionResults)
         s = r.samples
         n = length(s.evaluations)
         n_evaluations = convert(Int, sum(s.evaluations))
@@ -204,10 +204,10 @@ end
 #
 #     io::IO: An `IO` object to be written to.
 #
-#     r::Results: The `Results` object that we want to print to `io`.
+#     r::ExecutionResults: The `ExecutionResults` object to be printed to `io`.
 #
 
-function Base.show(io::IO, r::Results)
+function Base.show(io::IO, r::ExecutionResults)
     stats = SummaryStatistics(r)
 
     max_length = 24
