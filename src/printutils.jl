@@ -1,4 +1,28 @@
-# Functions derived from "private" functions in Base
+function pretty_time_string(t)
+    if t < 1_000.0
+        @sprintf("%.2f ns", t)
+    elseif t < 1_000_000.0
+        @sprintf("%.2f μs", t / 1_000.0)
+    elseif t < 1_000_000_000.0
+        @sprintf("%.2f ms", t / 1_000_000.0)
+    else # if t < 1_000_000_000_000.0
+        @sprintf("%.2f s", t / 1_000_000_000.0)
+    end
+end
+
+function pretty_memory_string(b)
+    if b < 1_024.0
+        @sprintf("%.2f bytes", b)
+    elseif b < 1_024.0^2
+        @sprintf("%.2f kb", b / 1_024.0)
+    elseif b < 1_024.0^3
+        @sprintf("%.2f mb", b / 1_024.0^2)
+    else # if b < 1_024.0^4
+        @sprintf("%.2f gb", b / 1_024.0^3)
+    end
+end
+
+# The functions below are derived from "private" functions in Base
 
 # print elapsed time, return expression value
 const _mem_units = ["bytes", "KB", "MB", "GB", "TB", "PB"]
