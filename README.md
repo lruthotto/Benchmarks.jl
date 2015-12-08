@@ -1,10 +1,10 @@
 *Note: As you can see, this package is a more recently developed fork of the
-original. At the time of writing, I've done a fair amount of clean-up, getting
-rid of unused code and simplifying some of the existing code in order to avoid
+original. At the time of writing, I've done a fair amount of clean-up, removing
+unused code and simplifying some of the existing code in order to avoid
 duplication and increase readability. I've also restructured the various result
 types to make them more friendly for external use. Finally, I've refactored the
-test suite for wider and more targeted coverage. At some point, I hope for this
-fork and the original package to be merged. -- Jarrett*
+test suite for wider and more targeted coverage (which is now actually being
+tracked). At some point, I hope to merge this fork and the original package -- Jarrett*
 
 [![Build Status](https://travis-ci.org/jrevels/Benchmarks.jl.svg?branch=master)](https://travis-ci.org/jrevels/Benchmarks.jl)
 [![Coverage Status](https://coveralls.io/repos/jrevels/Benchmarks.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jrevels/Benchmarks.jl?branch=master)
