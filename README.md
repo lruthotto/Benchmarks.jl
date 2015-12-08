@@ -14,7 +14,7 @@ Benchmarks.jl
 
 A package to make Julia benchmarking both easy and rigorous.
 
-# Basic Usage Example
+## How to Use Benchmarks.jl
 
 For trivial benchmarking, you can use the `@benchmark` macro, which takes
 in a simple Julia expression and returns the results of benchmarking that
@@ -31,8 +31,6 @@ using Benchmarks
 
 @benchmark svd(rand(10, 10))
 ```
-
-# Advanced Usage Example
 
 You can fine-tune the benchmarking process by working with the lower-level
 interface used by `@benchmark`: the `Benchmarks.@benchmarkable`, which can be
@@ -79,14 +77,14 @@ Note that `Benchmark.execute` accepts the following keyword arguments (you'll pr
 - `ols_samples = 100`: The number of samples collected during each call to the benchmarkable function when performing the geometric search.
 - `verbose = false`: If `true`, progress will be printed to `STDOUT` during the geometric (no progress is printed unless a geometric search is triggered).
 
-# The Design of Benchmarks.jl
+## The Design of Benchmarks.jl
 
 Benchmarking is hard. To do it well, you have to care about the details of how
 code is executed and the statistical challenges that make it hard to generalize
 correctly from benchmark data. To explain the rationale for design of the
 package, we discuss the problems that the package is designed to solve.
 
-## Measurement Error: Benchmarks that Measure the Wrong Thing
+#### Measurement Error: Benchmarks that Measure the Wrong Thing
 
 The first problem that the Benchmarks package tries to solve is the problem of
 measurement error: benchmarking any expression that can be evaluated faster
@@ -119,7 +117,7 @@ error by measuring the time it takes to evaluate `sin(2.0)` a very large number
 of times. Then we apply linear regression to estimate the time it takes to
 evaluate `sin(2.0)` exactly once.
 
-# Accounting for Variability
+#### Accounting for Variability
 
 When you repeatedly evaluate the same expression, you find that the timings
 you measure are not all the same - there is often substantial variability across
@@ -131,7 +129,7 @@ small sample of measurements, we have to acknowledge that our estimate is
 uncertain. We do this by reporting 95% confidence intervals (CIs) for the
 average time per evaluation.
 
-# Resource Constraints
+#### Resource Constraints
 
 Getting the best estimate of the average time requires gathering as many
 samples as possible, but most people also want their benchmarks to run in a
