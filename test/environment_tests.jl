@@ -22,7 +22,4 @@ sleep(1)
 # Clock Resolution #
 ####################
 
-res1 = Benchmarks.estimate_clock_resolution(100_000)
-res2 = Benchmarks.estimate_clock_resolution(1)
-
-@test 50 < res1 < res2
+@test 0 < Benchmarks.estimate_clock_resolution()
