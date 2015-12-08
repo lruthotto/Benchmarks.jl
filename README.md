@@ -12,8 +12,7 @@ tracked). At some point, I hope to merge this fork and the original package -- J
 Benchmarks.jl
 =============
 
-A package to make Julia benchmarking both easy and rigorous. See the design
-section for details about what we mean by rigor.
+A package to make Julia benchmarking both easy and rigorous.
 
 # Basic Usage Example
 
@@ -21,7 +20,7 @@ For trivial benchmarking, you can use the `@benchmark` macro, which takes
 in a simple Julia expression and returns the results of benchmarking that
 expression:
 
-```jl
+```julia
 using Benchmarks
 
 @benchmark sin(2.0)
@@ -35,27 +34,52 @@ using Benchmarks
 
 # Advanced Usage Example
 
-For more advanced usage (and for all automated usage), you need to use a
-lower-level interface than the `@benchmark` macro. Here we give a minimal
-example of that lower-level interface:
+You can fine-tune the benchmarking process by working with the lower-level
+interface used by `@benchmark`: the `Benchmarks.@benchmarkable`, which can be
+used define a "benchmarkable" function, and `Benchmarks.execute`, which actually
+runs the function and returns the results.
 
-```jl
+Specifically, `Benchmarks.@benchmarkable` and is called in the following manner:
+
+```julia
 import Benchmarks
 
 Benchmarks.@benchmarkable(
-    sin_benchmark!,
-    nothing,
-    sin(2.0),
-    nothing
+    func_benchmark!, # a new function will be defined with this name
+    setup_expr,      # this expression will be run before benchmarking core
+    core_expr,       # this is the expression to be benchmarked
+    teardown_expr    # this expression will be run after benchmarking core
 )
 
-r = Benchmarks.execute(sin_benchmark!)
+# Now we can run the benchmarkable function we defined:
+results = Benchmark.execute(func_benchmark!)
 ```
 
-In the design section, we'll describe the way that the lower-level interface
-works.
+Here's a concrete example of the above:
 
-# The Design of the Benchmarks Package
+```julia
+import Benchmarks
+
+Benchmarks.@benchmarkable(
+    norm_benchmark!,
+    (v = rand(1000)),
+    norm(v),
+    println("Done with this execution!")
+)
+
+results = Benchmark.execute(norm_benchmark!)
+```
+
+Note that `Benchmark.execute` accepts the following keyword arguments (you'll probably need to read [the design section](#the-design-of-benchmarks-jl) to understand some of these):
+
+- `sample_limit = 100`:  The max number of samples to take when benchmarking. This limit is ignored in the event that a geometric search is triggered.
+- `time_limit = 10`: The max number of seconds to spend benchmarking. This limit is respected, even if a geometric search is triggered.
+- `τ = 0.95`: The minimum R² of the OLS model before the geometric search is considered to have converged.
+- `α = 1.1`: The growth rate for the geometric search.
+- `ols_samples = 100`: The number of samples collected during each call to the benchmarkable function when performing the geometric search.
+- `verbose = false`: If `true`, progress will be printed to `STDOUT` during the geometric (no progress is printed unless a geometric search is triggered).
+
+# The Design of Benchmarks.jl
 
 Benchmarking is hard. To do it well, you have to care about the details of how
 code is executed and the statistical challenges that make it hard to generalize
@@ -87,54 +111,35 @@ The reason for that inaccuracy is that `sin(2.0)` can be evaluated much faster
 than the system clock's finest resolution. As such, you're almost exclusively
 measuring variability in the system clock when you evaluate `@time sin(2.0)`.
 
-To deal with this, the Benchmarks package exploits a simple linear
-relationship: evaluating an expression N times in a row should take
-approximately N times as long as evaluating the same expression exactly 1
-time. This linear relationship holds almost perfectly as N grows. Thus, we
-solve the problem of measurement error by measuring the time it takes to
-evaluate `sin(2.0)` a very large number of times. Then we apply linear
-regression to estimate the time it takes to evaluate `sin(2.0)` exactly once.
+To deal with this, Benchmarks.jl exploits a simple linear relationship:
+evaluating an expression N times in a row should take approximately N times as
+long as evaluating the same expression exactly 1 time. This linear relationship
+holds almost perfectly as N grows. Thus, we solve the problem of measurement
+error by measuring the time it takes to evaluate `sin(2.0)` a very large number
+of times. Then we apply linear regression to estimate the time it takes to
+evaluate `sin(2.0)` exactly once.
 
 # Accounting for Variability
 
 When you repeatedly evaluate the same expression, you find that the timings
-you measure are not all the same. Instead, there is often substantial
-variability across measurements.
+you measure are not all the same - there is often substantial variability across
+measurements.
 
-Traditional statistical methods are often employed to resolve this problem. The
-Benchmarks package tries to estimate the average time that it would take to
-evaluate an expression. Because the average is estimated from a small sample
-of measurements, we have to acknowledge that our estimate is uncertain. We
-do this by reporting 95% confidence intervals (hereafter called CI's) for
-the average time per evaluation.
+Benchmarks.jl tries to resolve this problem by estimating the average time that
+it would take to evaluate an expression. Because the average is estimated from a
+small sample of measurements, we have to acknowledge that our estimate is
+uncertain. We do this by reporting 95% confidence intervals (CIs) for the
+average time per evaluation.
 
-# Constrained Budgets
+# Resource Constraints
 
 Getting the best estimate of the average time requires gathering as many
-samples as possible. Most people want their benchmarks to run in a finite
-amount of time, so we need to impose some budget. The Benchmarks package
-exposes both a sample budget and a time budget. For very long computations,
-the time budget prevents the benchmarking process from taking more than 10s.
-This can be configured.
+samples as possible, but most people also want their benchmarks to run in a
+finite amount of time. For this reason, Benchmarks.jl exposes a way to
+constrain the number of samples and the amount of time taken through keyword
+arguments to `Benchmarks.execute` (`sample_limit` and `time_limit`).
 
-For mid-range computations, we also allow users to insist on acquiring at most
-100 samples. This can be effective if the time budget seems excessive for
-the purpose of estimating CI's accurately.
-
-For very fast computations that require OLS modeling, we ignore the samples
-budget, although we respect the user's specified time budget. This is because
-users cannot reasonably expect to know how many samples they need to gather
-to estimate the average time accurately.
-
-# Dependence on External Resources
-
-Sometimes we want to benchmark functions that depend upon external resources.
-For example, we want to time how long it takes us to parse a file, which we
-must first download.
-
-To handle these scenarios, the `@benchmarkable` macro takes in three
-expressions:
-
-* `setup`: This expression will be evaluated once before the benchmark starts executing.
-* `core`: This expression is the core expression we want to benchmark.
-* `teardown`: This expression will be evaluated once after the core expression stops executing.
+Note that, for very fast computations that require OLS modeling, `sample_limit`
+is ignored (`time_limit` is still respected, however). This is because users
+cannot reasonably expect to know how many samples they need to gather to
+estimate the average time accurately.
