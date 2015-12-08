@@ -6,6 +6,9 @@ types to make them more friendly for external use. Finally, I've refactored the
 test suite for wider and more targeted coverage. At some point, I hope for this
 fork and the original package to be merged. -- Jarrett*
 
+[![Build Status](https://travis-ci.org/jrevels/Benchmarks.jl.svg?branch=master)](https://travis-ci.org/jrevels/Benchmarks.jl)
+[![Coverage Status](https://coveralls.io/repos/jrevels/Benchmarks.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jrevels/Benchmarks.jl?branch=master)
+
 Benchmarks.jl
 =============
 
