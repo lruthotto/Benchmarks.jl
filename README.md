@@ -70,7 +70,7 @@ Benchmarks.@benchmarkable(
 results = Benchmark.execute(norm_benchmark!)
 ```
 
-Note that `Benchmark.execute` accepts the following keyword arguments (you'll probably need to read [the design section](#the-design-of-benchmarks-jl) to understand some of these):
+Note that `Benchmark.execute` accepts the following keyword arguments (you'll probably need to read [the design section](#the-design-of-benchmarksjl) to understand some of these):
 
 - `sample_limit = 100`:  The max number of samples to take when benchmarking. This limit is ignored in the event that a geometric search is triggered.
 - `time_limit = 10`: The max number of seconds to spend benchmarking. This limit is respected, even if a geometric search is triggered.
