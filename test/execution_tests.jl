@@ -44,7 +44,7 @@ v = Int[0, 0]
 Benchmarks.@benchmarkable(sin_benchmark!, (v[1] += 1), sin(2.0), (v[2] += 1))
 r = Benchmarks.execute(sin_benchmark!; time_limit = 1)
 
-@test 0 < r.totaltime < 1
+@test 0 < r.totaltime < 1.3
 @test (v[1] > 0) && (v[1] == v[2])
 
 # time_limit #
