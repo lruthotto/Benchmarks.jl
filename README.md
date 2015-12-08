@@ -111,7 +111,7 @@ For mid-range computations, we also allow users to insist on acquiring at most
 the purpose of estimating CI's accurately.
 
 For very fast computations that require OLS modeling, we ignore the samples
-budget, although we respect the user's specificed time budget. This is because
+budget, although we respect the user's specified time budget. This is because
 users cannot reasonably expect to know how many samples they need to gather
 to estimate the average time accurately.
 
@@ -124,8 +124,6 @@ must first download.
 To handle these scenarios, the `@benchmarkable` macro takes in three
 expressions:
 
-* `setup`: This expression will be evaluated once before the benchmark starts
-      executing.
+* `setup`: This expression will be evaluated once before the benchmark starts executing.
 * `core`: This expression is the core expression we want to benchmark.
-* `teardown`: This expression will be evaluated once after the core expression
-      stops executing.
+* `teardown`: This expression will be evaluated once after the core expression stops executing.
