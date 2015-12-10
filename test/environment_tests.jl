@@ -1,5 +1,4 @@
-import Benchmarks
-using Base.Test
+using Benchmarks, Base.Test
 
 ############################
 # Environment Construction #

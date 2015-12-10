@@ -1,4 +1,4 @@
-import Benchmarks: Samples, ExecutionResults, SummaryStats
+using Benchmarks: Samples, ExecutionResults, SummaryStats
 using Base.Test
 
 ###########
