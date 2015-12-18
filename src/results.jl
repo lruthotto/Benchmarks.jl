@@ -84,7 +84,6 @@ end
 ################
 
 immutable SummaryStats
-    results::ExecutionResults
     timepereval::Tuple{Nullable{Float64},Float64,Nullable{Float64}}
     rsquared::Nullable{Float64}
     gcpercent::Tuple{Nullable{Float64},Float64,Nullable{Float64}}
@@ -105,7 +104,7 @@ immutable SummaryStats
         nbytes = fld(s.bytes[i], evals_i)
         nallocs = fld(s.allocs[i], evals_i)
 
-        return new(results, timepereval, rsquared, gcpercent,
+        return new(timepereval, rsquared, gcpercent,
                    nsamples, nevals, nbytes, nallocs)
     end
 end
@@ -161,7 +160,7 @@ function Base.show(io::IO, stats::SummaryStats)
         rsqr_str = string(round(get(stats.rsquared), 2))
     end
 
-    println(io, "Benchmarks.SummaryStats (see :results field for ExecutionResults):")
+    println(io, "Benchmarks.SummaryStats:")
     println(io, "  estimated time per evaluation: ", timestr)
     println(io, "  R² of OLS model:               ", rsqr_str)
     println(io, "  estimated % time in GC:        ", gcstr)
