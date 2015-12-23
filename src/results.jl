@@ -73,10 +73,11 @@ immutable ExecutionResults
 end
 
 function Base.show(io::IO, r::ExecutionResults)
-    println(io, "Benchmarks.ExecutionResults (see :samples field for Samples):")
+    println(io, "Benchmarks.ExecutionResults (see :samples field for Samples;):")
     println(io, "  precompiled?:                     ", r.precompiled)
     println(io, "  multiple evaluations per sample?: ", r.multiple_evals)
-    print(io,   "  total time spent benchmarking:    ", round(r.totaltime, 2), " s")
+    println(io, "  total time spent benchmarking:    ", round(r.totaltime, 2), " s")
+    show(io, SummaryStats(r), "  ")
 end
 
 ################
@@ -141,7 +142,7 @@ function calc_gcpercent(s::Samples)
     end
 end
 
-function Base.show(io::IO, stats::SummaryStats)
+function Base.show(io::IO, stats::SummaryStats, pad::AbstractString = "")
     t_lo, t, t_hi = stats.timepereval
     timestr = prettytime(t)
     if !(isnull(t_lo) || isnull(t_hi))
@@ -149,9 +150,9 @@ function Base.show(io::IO, stats::SummaryStats)
     end
 
     gc_lo, gc, gc_hi = stats.gcpercent
-    gcstr = "$(round(gc,2))%"
+    gcstr = "$(round(gc,2)) %"
     if !(isnull(gc_lo) || isnull(gc_hi))
-        gcstr = "$gcstr [$(round(get(gc_lo),2))%, $(round(get(gc_hi),2))%]"
+        gcstr = "$gcstr [$(round(get(gc_lo),2)) %, $(round(get(gc_hi),2)) %]"
     end
 
     if isnull(stats.rsquared)
@@ -160,12 +161,12 @@ function Base.show(io::IO, stats::SummaryStats)
         rsqr_str = string(round(get(stats.rsquared), 2))
     end
 
-    println(io, "Benchmarks.SummaryStats:")
-    println(io, "  estimated time per evaluation: ", timestr)
-    println(io, "  R² of OLS model:               ", rsqr_str)
-    println(io, "  estimated % time in GC:        ", gcstr)
-    println(io, "  bytes allocated:               ", prettymemory(stats.nbytes))
-    println(io, "  number of allocations:         ", stats.nallocs)
-    println(io, "  number of samples:             ", stats.nsamples)
-    print(io,   "  number of evaluations:         ", stats.nevals)
+    println(io, pad, "Benchmarks.SummaryStats:")
+    println(io, pad, "  estimated time per evaluation: ", timestr)
+    println(io, pad, "  R² of OLS model:               ", rsqr_str)
+    println(io, pad, "  estimated % time in GC:        ", gcstr)
+    println(io, pad, "  bytes allocated:               ", prettymemory(stats.nbytes))
+    println(io, pad, "  number of allocations:         ", stats.nallocs)
+    println(io, pad, "  number of samples:             ", stats.nsamples)
+    print(io,   pad, "  number of evaluations:         ", stats.nevals)
 end
