@@ -6,6 +6,10 @@ function estimate_clock_resolution(nsamples::Integer = 10_000)
     for _ in 1:nsamples
         t1 = Base.time_ns()
         t2 = Base.time_ns()
+        # On Linux AArch64 it seems that t1 and t2 could be the same sometimes
+        while t2 <= t1
+            t2 = Base.time_ns()
+        end
         Δt = t2 - t1
         min_Δt = min(min_Δt, Δt)
     end
