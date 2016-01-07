@@ -73,7 +73,8 @@ immutable ExecutionResults
 end
 
 function Base.show(io::IO, r::ExecutionResults)
-    println(io, "Benchmarks.ExecutionResults (see :samples field for Samples;):")
+    println(io, "Benchmarks.ExecutionResults:")
+    println(io, "  samples:                          ", "(see :samples field)")
     println(io, "  precompiled?:                     ", r.precompiled)
     println(io, "  multiple evaluations per sample?: ", r.multiple_evals)
     println(io, "  total time spent benchmarking:    ", round(r.totaltime, 2), " s")
