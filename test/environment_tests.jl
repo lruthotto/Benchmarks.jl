@@ -1,5 +1,11 @@
 using Benchmarks, Base.Test
 
+####################
+# Clock Resolution #
+####################
+
+@test 0 < Benchmarks.estimate_clock_resolution() < 2000
+
 ############################
 # Environment Construction #
 ############################
