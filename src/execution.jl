@@ -92,6 +92,7 @@ macro benchmarkable(name, setup, core, teardown)
     #   the caller might do).
     quote
         function $(esc(name))(s::Samples, nsamples, nevals)
+            gc()
             $(benchfn)(s, nsamples, nevals, $(map(esc, userargs)...))
         end
 
