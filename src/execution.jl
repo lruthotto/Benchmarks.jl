@@ -18,6 +18,18 @@ end
 # @benchmarkable #
 ##################
 
+# take a list of arguments and return the list with any parameter kwargs
+# extracted and appended to the rest of the original arguments
+function flatten_parameters(fargs)
+    if !(isempty(fargs))
+        arg1 = first(fargs)
+        if isa(arg1, Expr) && arg1.head == :parameters
+            return [drop(fargs, 1)..., arg1.args...]
+        end
+    end
+    return fargs
+end
+
 # The @benchmarkable macro combines a tuple of expressions into a function
 # that can be executed using `Benchmarks.execute`.
 #
@@ -44,7 +56,7 @@ macro benchmarkable(name, setup, core, teardown)
     # we only expand the passed expression if it is not already a function call.
     expr = (core.head == :call) ? core : expand(core)
     expr.head == :call || throw(ArgumentError("expression to benchmark must be a function call"))
-    f, fargs = expr.args[1], expr.args[2:end]
+    f, fargs = expr.args[1], flatten_parameters(expr.args[2:end])
     nargs = length(expr.args)-1
 
     # Pull out the arguments -- both positional and keywords

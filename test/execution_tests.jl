@@ -22,6 +22,7 @@ using Benchmarks, Base.Test
     # keyword arguments #
     #-------------------#
     @benchmark svds(A, nsv=1)
+    @benchmark svds(A; nsv=1)
 
     # local scopes #
     #--------------#
