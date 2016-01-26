@@ -42,15 +42,15 @@ Specifically, `Benchmarks.@benchmarkable` and is called in the following manner:
 ```julia
 import Benchmarks
 
-Benchmarks.@benchmarkable(
-    func_benchmark!, # a new function will be defined with this name
+# generate a new benchmarkable function and bind it to the `mybench!` variable
+mybench! = Benchmarks.@benchmarkable(
     setup_expr,      # this expression will be run before benchmarking core
     core_expr,       # this is the expression to be benchmarked
     teardown_expr    # this expression will be run after benchmarking core
 )
 
 # Now we can run the benchmarkable function we defined:
-results = Benchmark.execute(func_benchmark!)
+results = Benchmark.execute(mybench!)
 ```
 
 Here's a concrete example of the above:
@@ -58,14 +58,13 @@ Here's a concrete example of the above:
 ```julia
 import Benchmarks
 
-Benchmarks.@benchmarkable(
-    norm_benchmark!,
+normbench! = Benchmarks.@benchmarkable(
     (v = rand(1000)),
     norm(v),
     println("Done with this execution!")
 )
 
-results = Benchmark.execute(norm_benchmark!)
+results = Benchmark.execute(normbench!)
 ```
 
 Note that `Benchmark.execute` accepts the following keyword arguments (you'll probably need to read [the design section](#the-design-of-benchmarksjl) to understand some of these):

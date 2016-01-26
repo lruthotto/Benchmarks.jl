@@ -5,11 +5,11 @@
 # The @benchmark macro generates a benchmarkable function for the given `core`
 # expression, then benchmarks that function, returning the ExecutionResults.
 macro benchmark(core)
-    name = esc(gensym())
+    tmp = esc(gensym())
     return quote
-        begin
-            Benchmarks.@benchmarkable($name, nothing, $(esc(core)), nothing)
-            Benchmarks.execute($name)
+        let
+            $(tmp) = Benchmarks.@benchmarkable(nothing, $(esc(core)), nothing)
+            Benchmarks.execute($(tmp))
         end
     end
 end
@@ -35,7 +35,6 @@ end
 #
 # Arguments:
 #
-#     name: The name of the function that will be generated.
 #     setup: An expression that will be executed before the core
 #            expression starts executing.
 #     core: The core expression that will be executed.
@@ -47,7 +46,7 @@ end
 #     s::Samples: A Samples object in which benchmark data will be stored
 #     nsamples::Integer: The number of samples that will be gathered
 #     nevals::Integer: The number of core expression evals per sample
-macro benchmarkable(name, setup, core, teardown)
+macro benchmarkable(setup, core, teardown)
     # We only support function calls to be passed in `core`, but some syntaxes
     # have special parsing that will lower to a function call upon expansion
     # (e.g., A[i] or user macros). The tricky thing is that keyword functions
@@ -103,52 +102,52 @@ macro benchmarkable(name, setup, core, teardown)
     #   code that's unrelated to the return value (since it doesn't know what
     #   the caller might do).
     quote
-        function $(esc(name))(s::Samples, nsamples, nevals)
-            gc()
-            $(benchfn)(s, nsamples, nevals, $(map(esc, userargs)...))
-        end
+        let
+            function $(benchfn)(samples::Benchmarks.Samples, nsamples, nevals, $(args...))
+                # Execute the setup expression exactly once
+                $(esc(setup))
 
-        function $(benchfn)(s::Samples, nsamples, nevals, $(args...))
-            # Execute the setup expression exactly once
-            $(esc(setup))
+                # Generate n_samples by evaluating the core
+                for _ in 1:nsamples
+                    # Store pre-evaluation state information
+                    stats = Base.gc_num()
+                    time_before = time_ns()
 
-            # Generate n_samples by evaluating the core
-            for _ in 1:nsamples
-                # Store pre-evaluation state information
-                stats = Base.gc_num()
-                time_before = time_ns()
+                    # Evaluate the core expression n_evals times.
+                    for _ in 1:nevals
+                        out = $(innerfn)($(args...))
+                    end
 
-                # Evaluate the core expression n_evals times.
-                for _ in 1:nevals
-                    out = $(innerfn)($(args...))
+                    # get time before comparing GC info
+                    elapsed_time = time_ns() - time_before
+
+                    # Compare post-evaluation state with pre-evaluation state.
+                    diff = Base.GC_Diff(Base.gc_num(), stats)
+                    bytes = diff.allocd
+                    allocs = diff.malloc + diff.realloc + diff.poolalloc + diff.bigalloc
+                    gc_time = diff.total_time
+
+                    # Append data for this sample to the Samples objects.
+                    push!(samples, nevals, elapsed_time, gc_time, bytes, allocs)
                 end
 
-                # get time before comparing GC info
-                elapsed_time = time_ns() - time_before
+                # Execute the teardown expression exactly once
+                $(esc(teardown))
 
-                # Compare post-evaluation state with pre-evaluation state.
-                diff = Base.GC_Diff(Base.gc_num(), stats)
-                bytes = diff.allocd
-                allocs = diff.malloc + diff.realloc + diff.poolalloc + diff.bigalloc
-                gc_time = diff.total_time
-
-                # Append data for this sample to the Samples objects.
-                push!(s, nevals, elapsed_time, gc_time, bytes, allocs)
+                # The caller receives all data via the mutated Samples object.
+                return samples
             end
 
-            # Execute the teardown expression exactly once
-            $(esc(teardown))
+            @noinline function $(innerfn)($(map(esc, args)...))
+                return $(esc(f))($(map(esc, posargs)...), $(map(esc, kws)...))
+            end
 
-            # The caller receives all data via the mutated Samples object.
-            return nothing
+            # "return" a function that serves at the outermost entry point
+            (samples::Benchmarks.Samples, nsamples, nevals) -> begin
+                gc()
+                return $(benchfn)(samples, nsamples, nevals, $(map(esc, userargs)...))
+            end
         end
-
-        @noinline function $(innerfn)($(map(esc, args)...))
-            $(esc(f))($(map(esc, posargs)...), $(map(esc, kws)...))
-        end
-
-        # "return" the outermost entry point as the final expression
-        $(esc(name))
     end
 end
 
