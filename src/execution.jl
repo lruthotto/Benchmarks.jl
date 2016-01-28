@@ -143,8 +143,8 @@ macro benchmarkable(setup, core, teardown)
             end
 
             # "return" a function that serves at the outermost entry point
-            (samples::Benchmarks.Samples, nsamples, nevals) -> begin
-                gc()
+            (samples::Benchmarks.Samples, nsamples, nevals, rungc) -> begin
+                rungc && gc()
                 return $(benchfn)(samples, nsamples, nevals, $(map(esc, userargs)...))
             end
         end
@@ -180,14 +180,16 @@ end
 #
 #     verbose = false:     Print progress info as we go?
 #
-function execute(f!::Function; verbose::Bool = false, sample_limit = 100,
-                 time_limit = 10, ols_samples = 100, τ = 0.95, α = 1.1)
+#     rungc = false:       Run gc() between calls to `f!`?
+function execute(f!::Function; verbose::Bool = false, rungc::Bool = true,
+                sample_limit = 100, time_limit = 10, ols_samples = 100,
+                τ = 0.95, α = 1.1)
     start_time = time()
 
     # Initial benchmark of f!. Note that this can require a compilation step,
     # which might bias the resulting estimates.
     s = Samples()
-    f!(s, 1, 1)
+    f!(s, 1, 1, rungc)
 
     # Stop benchmarking if we've already exhausted our time budget
     total_time = time() - start_time
@@ -218,7 +220,7 @@ function execute(f!::Function; verbose::Bool = false, sample_limit = 100,
     empty!(s)
 
     # We evaluate f! to generate our first potentially unbiased sample.
-    f!(s, 1, 1)
+    f!(s, 1, 1, rungc)
 
     # If we've used up our time or sample limits, we stop.
     total_time = time() - start_time
@@ -235,7 +237,7 @@ function execute(f!::Function; verbose::Bool = false, sample_limit = 100,
     if debiased_time_ns > 1_000 * estimate_clock_resolution()
         remaining_time_ns = (time_limit - total_time) * 10.0^9
         remaining_samples = div(remaining_time_ns, debiased_time_ns)
-        f!(s, min(remaining_samples, sample_limit - 1), 1)
+        f!(s, min(remaining_samples, sample_limit - 1), 1, rungc)
         return ExecutionResults(s, true, false, time() - start_time)
     end
 
@@ -261,7 +263,7 @@ function execute(f!::Function; verbose::Bool = false, sample_limit = 100,
 
     while !finished
         # Gather many samples, each of which includes multiple evaluations.
-        f!(s, ols_samples, ceil(Integer, n_evals))
+        f!(s, ols_samples, ceil(Integer, n_evals), rungc)
 
         # Perform an OLS regression to estimate the per-evaluation time.
         a, b, r² = ols(s.evals, s.times)
