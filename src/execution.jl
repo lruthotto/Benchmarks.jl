@@ -180,7 +180,7 @@ end
 #
 #     verbose = false:     Print progress info as we go?
 #
-#     rungc = false:       Run gc() between calls to `f!`?
+#     rungc = true:       Run gc() between calls to `f!`?
 function execute(f!::Function; verbose::Bool = false, rungc::Bool = true,
                 sample_limit = 100, time_limit = 10, ols_samples = 100,
                 τ = 0.95, α = 1.1)

@@ -75,6 +75,7 @@ Note that `Benchmark.execute` accepts the following keyword arguments (you'll pr
 - `α = 1.1`: The growth rate for the geometric search.
 - `ols_samples = 100`: The number of samples collected during each call to the benchmarkable function when performing the geometric search.
 - `verbose = false`: If `true`, progress will be printed to `STDOUT` during the geometric (no progress is printed unless a geometric search is triggered).
+- `rungc = true`: If `true`, periodically run `gc()` between execution samples.
 
 ## The Design of Benchmarks.jl
 
