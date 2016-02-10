@@ -73,49 +73,67 @@ macro benchmarkable(setup, core, teardown)
         end
     end
 
-    benchfn = gensym("bench")
-    innerfn = gensym("inner")
+    # * `benchfn`: This is the outermost "workhorse" function that is called by
+    #   `execute` to collect a run of samples. This function loops over the requested
+    #   number of samples, and performs the requested number of evaluations for each
+    #   sample. To prevent unwanted LLVM optimizations, user arguments are reevaluated at
+    #   each sample by `argsfn`, and the actual target function `f` is called via the
+    #   `wrapfn` wrapper.
+    #
+    # * `argsfn`: This function generates the target function's user arguments every time
+    #    it is called. By reevaluating the arguments for each sample, we are able to ensure
+    #    that our benchmark obtains a wide range of samples for properties that can vary
+    #    between allocations, like memory alignment. By forcing `argsfn` not to inline, we
+    #    prevent any generated arguments from being lifted out of the sampling loop by LLVM
+    #    optimizations (which would defeat the purpose of freshly evaluating the arguments
+    #    for each sample).
+    #
+    # * `wrapfn`: This function is a wrapper around the target function `f`. Like `argsfn`,
+    #   `wrapfn` exists to prevent unwanted LLVM optimizations in `benchfn`'s sampling
+    #   loop. Specifically, by annotating `wrapfn` with `@noinline` will prevent LLVM from
+    #   inlining `f` in `benchfn`. This also means that all timings will include a slight
+    #   but consistent overhead from the extra function call.
 
-    # Strategy: we create *three* functions:
-    # * The outermost function is the entry point. It's simply a closure around
-    #   the expressions the user passed in `core` as the arguments to the
-    #   benchmarked function. This allows the arguments to be considered setup,
-    #   which are evaluated in the correct scope. However, that means that
-    #   within this outermost function, the arguments probably aren't
-    #   concretely typed. This means that if we were to run the benchmarking
-    #   function in this outermost function, we'd end up benchmarking dynamic
-    #   dispatch most of the time.  So we introduce a function barrier here.
-    # * The second level (`benchfn`) is the benchmarking loop.  Here is where
-    #   the real work gets done.  However, if we were to call the benchmarked
-    #   function directly here, it might get inlined.  And if it gets inlined,
-    #   then LLVM can use optimizations that interact with the test loop itself.
-    #   No longer are we simply testing the benchmarked function; we are testing
-    #   the benchmark loops.  So in order to circumvent this, we introduce a
-    #   third function that is explicitly marked `@noinline`
-    # * It is within this third, `inner` function that we call the user's
-    #   function that they want to benchmark. This means that all timings will
-    #   include the overhead of at least one function call. But it also means
-    #   that we can prevent LLVM from doing optimizations that are related to
-    #   the benchmarking itself: it must always call the inner function in the
-    #   benchmarking function (since at the mid-level it doesn't know what that
-    #   function might do), and within the inner function it can only eliminate
-    #   code that's unrelated to the return value (since it doesn't know what
-    #   the caller might do).
+    benchfn = gensym("bench")
+    wrapfn = gensym("wrap")
+
+    if nargs > 0
+        argsfn = gensym("args")
+        argsfndef = quote
+            @noinline function $(argsfn)()
+                return ($(map(esc, userargs)...),)
+            end
+        end
+        argscall = :(($(args...),) = $(argsfn)())
+    else # don't bother generating args if there aren't any args
+        argsfndef = :()
+        argscall = :()
+    end
+
     quote
         let
-            function $(benchfn)(samples::Benchmarks.Samples, nsamples, nevals, $(args...))
+            $(argsfndef)
+
+            @noinline function $(wrapfn)($(map(esc, args)...))
+                return $(esc(f))($(map(esc, posargs)...), $(map(esc, kws)...))
+            end
+
+            function $(benchfn)(samples::Benchmarks.Samples, nsamples, nevals)
                 # Execute the setup expression exactly once
                 $(esc(setup))
 
                 # Generate n_samples by evaluating the core
                 for _ in 1:nsamples
+                    # reevaluate the arguments at each sample
+                    $(argscall)
+
                     # Store pre-evaluation state information
                     stats = Base.gc_num()
                     time_before = time_ns()
 
                     # Evaluate the core expression n_evals times.
                     for _ in 1:nevals
-                        out = $(innerfn)($(args...))
+                        out = $(wrapfn)($(args...))
                     end
 
                     # get time before comparing GC info
@@ -136,15 +154,6 @@ macro benchmarkable(setup, core, teardown)
 
                 # The caller receives all data via the mutated Samples object.
                 return samples
-            end
-
-            @noinline function $(innerfn)($(map(esc, args)...))
-                return $(esc(f))($(map(esc, posargs)...), $(map(esc, kws)...))
-            end
-
-            # "return" a function that serves at the outermost entry point
-            (samples::Benchmarks.Samples, nsamples, nevals) -> begin
-                return $(benchfn)(samples, nsamples, nevals, $(map(esc, userargs)...))
             end
         end
     end
