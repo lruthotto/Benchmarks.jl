@@ -118,12 +118,15 @@ macro benchmarkable(setup, core, teardown)
                 return $(esc(f))($(map(esc, posargs)...), $(map(esc, kws)...))
             end
 
-            function $(benchfn)(samples::Benchmarks.Samples, nsamples, nevals)
+            function $(benchfn)(samples::Benchmarks.Samples, nsamples, nevals, forcegc)
                 # Execute the setup expression exactly once
                 $(esc(setup))
 
                 # Generate n_samples by evaluating the core
                 for _ in 1:nsamples
+                    # if forcegc is enabled, run gc() before every sample iteration
+                    forcegc && gc()
+
                     # reevaluate the arguments at each sample
                     $(argscall)
 
@@ -188,17 +191,26 @@ end
 #
 #     verbose = false:     Print progress info as we go?
 #
-#     rungc = true:       Run gc() before benchmarking?
-function execute(f!::Function; verbose::Bool = false, rungc::Bool = true,
-                 sample_limit = 100, time_limit = 10, ols_samples = 100,
+#     forcegc = false:     Run gc() before/after benchmarking and between benchmark
+#                          samples? Note that enabling this option can cause execution to
+#                          overshoot small `time_limit`s.
+#
+#     disablegc = false:   Disable GC while benchmarking?
+
+function execute(f!::Function; verbose::Bool = false, sample_limit = 100, time_limit = 10,
+                 ols_samples = 100, forcegc::Bool = false, disablegc::Bool = false,
                  τ = 0.95, α = 1.1)
-    rungc && gc()
+    @assert !(forcegc && disablegc) "disablegc and forcegc cannot be enabled simultaneously"
+
+    forcegc && gc() # if forcegc is enabled, run gc before benchmarking
+    disablegc && gc_enable(false) # if disablegc is true, turn off GC until we're finished
+
     start_time = time()
 
     # Initial benchmark of f!. Note that this can require a compilation step,
     # which might bias the resulting estimates.
     s = Samples()
-    f!(s, 1, 1)
+    f!(s, 1, 1, forcegc)
 
     # Stop benchmarking if we've already exhausted our time budget
     total_time = time() - start_time
@@ -229,7 +241,7 @@ function execute(f!::Function; verbose::Bool = false, rungc::Bool = true,
     empty!(s)
 
     # We evaluate f! to generate our first potentially unbiased sample.
-    f!(s, 1, 1)
+    f!(s, 1, 1, forcegc)
 
     # If we've used up our time or sample limits, we stop.
     total_time = time() - start_time
@@ -246,7 +258,7 @@ function execute(f!::Function; verbose::Bool = false, rungc::Bool = true,
     if debiased_time_ns > 1_000 * estimate_clock_resolution()
         remaining_time_ns = (time_limit - total_time) * 10.0^9
         remaining_samples = div(remaining_time_ns, debiased_time_ns)
-        f!(s, min(remaining_samples, sample_limit - 1), 1)
+        f!(s, min(remaining_samples, sample_limit - 1), 1, forcegc)
         return ExecutionResults(s, true, false, time() - start_time)
     end
 
@@ -270,9 +282,9 @@ function execute(f!::Function; verbose::Bool = false, rungc::Bool = true,
     n_evals = 2.0 # start with 2 evals per sample
     min_time = 0.5 # spend a minimum of 0.5 seconds on our search
 
-    while !finished
+    while !(finished)
         # Gather many samples, each of which includes multiple evaluations.
-        f!(s, ols_samples, ceil(Integer, n_evals))
+        f!(s, ols_samples, ceil(Integer, n_evals), forcegc)
 
         # Perform an OLS regression to estimate the per-evaluation time.
         a, b, r² = ols(s.evals, s.times)
@@ -288,5 +300,10 @@ function execute(f!::Function; verbose::Bool = false, rungc::Bool = true,
         n_evals *= α
     end
 
-    return ExecutionResults(s, true, true, time() - start_time)
+    results = ExecutionResults(s, true, true, time() - start_time)
+
+    disablegc && gc_enable(true) # if GC was disabled, re-enable it now that we're finished
+    forcegc && gc() # if forcegc is enabled, run once after benchmarking
+
+    return results
 end

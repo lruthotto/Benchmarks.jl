@@ -43,14 +43,14 @@ end
 #---------#
 v = Int[0, 0]
 sinbench! = Benchmarks.@benchmarkable((v[1] += 1), sin(2.0), (v[2] += 1))
-r = Benchmarks.execute(sinbench!; time_limit = 1, sample_limit = 100, rungc = false)
+r = Benchmarks.execute(sinbench!; time_limit = 1, sample_limit = 100, forcegc = true)
 
-@test 0 < r.totaltime < 1.3
+@test 0 < r.totaltime < 6
 @test (v[1] > 0) && (v[1] == v[2])
 
 # time_limit #
 #------------#
 sleepbench! = Benchmarks.@benchmarkable(nothing, sleep(2), nothing)
-r = Benchmarks.execute(sleepbench!; time_limit = 2)
+r = Benchmarks.execute(sleepbench!; time_limit = 2, disablegc = true)
 
-@test 2 <= r.totaltime < 2.3
+@test 2 <= r.totaltime < 2.5

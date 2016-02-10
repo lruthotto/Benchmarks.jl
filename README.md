@@ -75,6 +75,8 @@ Note that `Benchmark.execute` accepts the following keyword arguments (you'll pr
 - `ols_samples = 100`: The number of samples collected during each call to the benchmarkable function when performing the geometric search.
 - `verbose = false`: If `true`, progress will be printed to `STDOUT` during the geometric (no progress is printed unless a geometric search is triggered).
 - `rungc = true`: If `true`, periodically run `gc()` between execution samples.
+- `forcegc = false`: If `true`, run `gc()` before and after benchmarking, as well as between benchmark samples. Note that enabling this option can cause execution to overshoot small `time_limit`s.
+- `disablegc = false`: If `true`, disable GC while benchmarking (and re-enable it once benchmarking is finished). This option cannot be `true` if `forcegc` is `true`.
 
 ## The Design of Benchmarks.jl
 
