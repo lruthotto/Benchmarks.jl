@@ -49,7 +49,7 @@ mybench! = Benchmarks.@benchmarkable(
 )
 
 # Now we can run the benchmarkable function we defined:
-results = Benchmark.execute(mybench!)
+results = Benchmarks.execute(mybench!)
 ```
 
 Here's a concrete example of the above:
@@ -63,10 +63,10 @@ normbench! = Benchmarks.@benchmarkable(
     println("Done with this execution!")
 )
 
-results = Benchmark.execute(normbench!)
+results = Benchmarks.execute(normbench!)
 ```
 
-Note that `Benchmark.execute` accepts the following keyword arguments (you'll probably need to read [the design section](#the-design-of-benchmarksjl) to understand some of these):
+Note that `Benchmarks.execute` accepts the following keyword arguments (you'll probably need to read [the design section](#the-design-of-benchmarksjl) to understand some of these):
 
 - `sample_limit = 100`:  The max number of samples to take when benchmarking. This limit is ignored in the event that a geometric search is triggered.
 - `time_limit = 10`: The max number of seconds to spend benchmarking. This limit is respected, even if a geometric search is triggered.
